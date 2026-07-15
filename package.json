@@ -1,0 +1,19 @@
+{
+  "name": "optica-global-playwright-tests",
+  "version": "1.0.0",
+  "description": "Muestra sanitizada de la suite de QA en Playwright para Óptica Global",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:optica": "playwright test tests/optica-global",
+    "test:report": "playwright show-report"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^26.0.1"
+  }
+}
