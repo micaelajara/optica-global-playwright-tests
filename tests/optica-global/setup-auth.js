@@ -1,15 +1,16 @@
-// Genera un storageState real (JWT de cliente logueado) para tests que necesitan
-// llegar autenticados al checkout, evitando mockear el login con page.route()
-// (no funciona acá: el login es un Server Action de Next.js que postea al mismo
-// /ar/account tanto para "enviar código" como para "verificar código", distinguidos
-// solo por un header interno — no hay URL propia que interceptar).
+// Generates a real storageState (logged-in customer JWT) for tests that need
+// to reach checkout authenticated, avoiding mocking the login with
+// page.route() (doesn't work here: login is a Next.js Server Action that
+// posts to the same /ar/account for both "send code" and "verify code",
+// distinguished only by an internal header — no dedicated URL to intercept).
 //
-// Requiere CUSTOMER_EMAIL en .env: un cliente @yopmail.com que YA tenga un pedido
-// hecho (una cuenta nueva no puede loguearse hasta completar su primer pedido,
-// ver BUG-15 en el plan de pruebas). yopmail expone su bandeja por web sin login,
-// así que este script lee el código directamente, sin intervención manual.
+// Requires CUSTOMER_EMAIL in .env: an @yopmail.com account that ALREADY has
+// a placed order (a brand-new account can't log in until it completes its
+// first order, see BUG-15 in the test plan). yopmail exposes its inbox over
+// the web with no login, so this script reads the code directly, with no
+// manual step needed.
 //
-// Correrlo de nuevo si el storageState expira o si cambia CUSTOMER_EMAIL:
+// Run it again if the storageState expires or if CUSTOMER_EMAIL changes:
 //   node --env-file=.env tests/optica-global/setup-auth.js
 const { chromium } = require('playwright');
 const { BASE_URL } = require('./helpers');
@@ -39,17 +40,17 @@ async function readCodeFromYopmail(browser, email) {
         await mailPage.close();
         return match[1];
       }
-      lastError = new Error('El último mail no contiene un código de 6 dígitos');
+      lastError = new Error('The latest email does not contain a 6-digit code');
     } catch (e) {
       lastError = e;
     }
   }
   await mailPage.close();
-  throw new Error('No se pudo leer el código de acceso de ' + email + ': ' + lastError?.message);
+  throw new Error('Could not read the access code for ' + email + ': ' + lastError?.message);
 }
 
 (async () => {
-  if (!CUSTOMER_EMAIL) throw new Error('Falta CUSTOMER_EMAIL en .env (ver .env.example)');
+  if (!CUSTOMER_EMAIL) throw new Error('Missing CUSTOMER_EMAIL in .env (see .env.example)');
 
   const browser = await chromium.launch();
   const loginPage = await browser.newPage();
@@ -68,10 +69,10 @@ async function readCodeFromYopmail(browser, email) {
 
   const loggedIn = await loginPage.getByRole('button', { name: 'Salir' }).count();
   if (!loggedIn) {
-    throw new Error('El login no terminó en sesión iniciada — revisar CUSTOMER_EMAIL o el flujo de identificación');
+    throw new Error('Login did not end in a signed-in session — check CUSTOMER_EMAIL or the identification flow');
   }
 
   await loginPage.context().storageState({ path: STORAGE_STATE_PATH });
-  console.log('storageState guardado en', STORAGE_STATE_PATH);
+  console.log('storageState saved to', STORAGE_STATE_PATH);
   await browser.close();
 })();

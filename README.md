@@ -1,41 +1,41 @@
-# Óptica Global — QA con Playwright
+# Óptica Global — QA with Playwright
 
-Suite de tests end-to-end que escribí como QA freelance para [Óptica Global](https://opticaglobal.store/ar), un ecommerce B2B mayorista de anteojos (Medusa JS), hoy en producción.
+End-to-end test suite I wrote as a freelance QA for [Óptica Global](https://opticaglobal.store/ar), a B2B wholesale eyewear ecommerce (Medusa JS), now live in production.
 
-Este repo es una **muestra sanitizada** del trabajo real: mismo código de tests, sin los datos internos del cliente (evidencia de bugs con IDs de órdenes/clientes reales, precios, emails de administración, etc.), que se documentan aparte en un repo privado.
+This repo is a **sanitized showcase** of the real work: same test code, without the client's internal data (bug evidence with real order/customer IDs, pricing, admin emails, etc.), which is documented separately in a private companion repo.
 
-## Qué cubre
+## What it covers
 
-- `tests/optica-global/seo.spec.js` — idioma del documento, title, meta description, `robots.txt`, `sitemap.xml`, canonical, alt text de imágenes, `<h1>` único por ficha de producto.
-- `tests/optica-global/catalogo.spec.js` — filtros por categoría, variantes sin stock deshabilitadas.
-- `tests/optica-global/control-acceso.spec.js` — control de acceso a nivel de API (OWASP API Top 10 / Broken Function Level Authorization): confirma que un endpoint de Admin rechaza requests sin token y con solo la publishable key del storefront.
-- `tests/optica-global/checkout.spec.js` — checkout end-to-end con login real (OTP por email) y un pedido real completo (Manual Payment, sin cobro real), reproduciendo un bug de overflow de texto en la página de orden confirmada cuando Dirección/Localidad/Nombre son muy largos.
-- `tests/optica-global/setup-auth.js` — genera el `storageState` de una sesión de cliente autenticado leyendo el código OTP directo de la bandeja pública de [yopmail](https://yopmail.com), sin intervención manual.
+- `tests/optica-global/seo.spec.js` — document language, title, meta description, `robots.txt`, `sitemap.xml`, canonical tag, image alt text, unique `<h1>` per product page.
+- `tests/optica-global/catalogo.spec.js` — category filters, out-of-stock variants shown as disabled.
+- `tests/optica-global/control-acceso.spec.js` — API-level access control (OWASP API Top 10 / Broken Function Level Authorization): confirms an Admin endpoint rejects requests with no token and with only the storefront's publishable key.
+- `tests/optica-global/checkout.spec.js` — end-to-end checkout with a real login (email OTP) and a real completed order (Manual Payment, no real charge), reproducing a text-overflow bug on the order-confirmed page when Address/City/Name are too long.
+- `tests/optica-global/setup-auth.js` — generates the `storageState` for an authenticated customer session by reading the OTP code straight from [yopmail](https://yopmail.com)'s public inbox, no manual steps needed.
 
-## Por qué el login es real y no mockeado
+## Why the login is real, not mocked
 
-El login de Óptica Global es un Server Action de Next.js: "enviar código" y "verificar código" postean al mismo endpoint, distinguidos solo por un header interno — no hay una URL propia que interceptar con `page.route()`. Mockear esa respuesta daría falsa confianza (no valida el backend real), así que el checkout se prueba con una sesión autenticada de verdad.
+Óptica Global's login is a Next.js Server Action: "send code" and "verify code" both post to the same endpoint, distinguished only by an internal header — there's no dedicated URL to intercept with `page.route()`. Mocking that response would give false confidence (it wouldn't validate the real backend), so checkout is tested against a genuinely authenticated session.
 
-## Cómo correr
+## How to run
 
 ```
 npm install
 npx playwright test tests/optica-global
 ```
 
-Requiere un `.env` local (ver `.env.example`) con:
-- Credenciales de Admin, para los tests que llaman a la API real.
-- `MEDUSA_PUBLISHABLE_KEY`, la publishable key del storefront (no es secreta, pero varía por ambiente).
-- `CUSTOMER_EMAIL`, una cuenta `@yopmail.com` que ya tenga un pedido hecho (una cuenta nueva no puede loguearse hasta completar su primer pedido).
+Requires a local `.env` (see `.env.example`) with:
+- Admin credentials, for tests that call the real API.
+- `MEDUSA_PUBLISHABLE_KEY`, the storefront's publishable key (not secret, but varies per environment).
+- `CUSTOMER_EMAIL`, an `@yopmail.com` account that already has a placed order (a brand-new account can't log in until it completes its first order).
 
-Antes de correr `checkout.spec.js` por primera vez (o si el login expira), generar el `storageState`:
+Before running `checkout.spec.js` for the first time (or if the login expires), generate the `storageState`:
 
 ```
 node --env-file=.env tests/optica-global/setup-auth.js
 ```
 
-`control-acceso.spec.js` usa IDs de orden/fulfillment de ejemplo (`_EXAMPLE_ID`) — para correrlo contra un ambiente real hay que reemplazarlos por IDs reales obtenidos vía Admin.
+`control-acceso.spec.js` uses placeholder order/fulfillment IDs (`_EXAMPLE_ID`) — to run it against a real environment, swap them for real IDs pulled from Admin.
 
 ## Stack
 
-Playwright + Node.js, contra un storefront Next.js sobre Medusa JS v2.
+Playwright + Node.js, against a Next.js storefront on top of Medusa JS v2.

@@ -1,36 +1,36 @@
-// Caso CO-09 del plan de pruebas (bug ya confirmado, BUG-01 en Reportes):
-// Dirección de envío / Localidad no validan longitud máxima de caracteres,
-// y el texto largo rompe el layout del resumen de la orden confirmada.
+// Test plan case CO-09 (confirmed bug, BUG-01 in the report): shipping
+// address / city don't validate max character length, and long text breaks
+// the layout of the order-confirmed summary.
 //
-// Login real (no mockeado): el login es un Server Action de Next.js — "enviar
-// código" y "verificar código" postean al mismo /ar/account, distinguidos solo
-// por un header interno, así que no hay URL que interceptar con page.route().
-// En cambio, se reusa un storageState generado una vez por separado con
-// `node --env-file=.env tests/optica-global/setup-auth.js` (login real vía
-// yopmail). Si el storageState falta o expiró, correr ese script de nuevo.
+// Real login (not mocked): login is a Next.js Server Action — "send code"
+// and "verify code" both post to the same /ar/account, distinguished only by
+// an internal header, so there's no URL to intercept with page.route().
+// Instead, this reuses a storageState generated once, separately, with
+// `node --env-file=.env tests/optica-global/setup-auth.js` (real login via
+// yopmail). If the storageState is missing or expired, run that script again.
 //
-// El carrito se arma con dos productos/variantes con stock real confirmado
-// para superar el mínimo de pedido de $150.000 sin pisar el límite de stock
-// de otras variantes. El stock se va consumiendo con cada corrida real de
-// este test (completa una orden real de verdad) — si vuelve a fallar por
-// "Carrito (0)" después de "Agregar", chequear stock real vía
+// The cart is built with two products/variants with confirmed real stock to
+// clear the $150,000 order minimum without hitting the stock limit of other
+// variants. Stock gets consumed on every real run of this test (it completes
+// a genuinely real order) — if it starts failing on "Cart (0)" after "Add",
+// check real stock via
 // GET /admin/products?fields=*variants.inventory_items.inventory.location_levels
-// y cambiar la variante acá por otra con unidades disponibles.
+// and swap the variant here for one with available units.
 //
-// El bug se confirmó visualmente recién en la página de orden confirmada
-// (/order/{id}/confirmed), NO en el paso de Revisión del checkout: ese paso
-// contiene el overflow dentro de su propia columna (no se ve roto), pero la
-// orden confirmada usa un layout distinto donde el texto sí se derrama sobre
-// las columnas vecinas (Contacto, Método). Cada pedido real generado por este
-// test queda visible en el Admin (Manual Payment, sin cobro real) — mismo
-// mecanismo que las órdenes de prueba #1 a #12 ya existentes.
+// The bug was only confirmed visually on the order-confirmed page
+// (/order/{id}/confirmed), NOT on the checkout Review step: that step keeps
+// the overflow contained within its own column (doesn't look broken), but
+// the confirmed-order page uses a different layout where the text does spill
+// over the neighboring columns (Contact, Method). Every real order this test
+// generates stays visible in Admin (Manual Payment, no real charge) — same
+// mechanism as the existing test orders #1 through #12.
 //
-// getBoundingClientRect() de un elemento NO crece por el contenido que se
-// desborda (overflow: visible no expande la caja del propio elemento) — por
-// eso la comparación de bounding boxes entre columnas no detecta el bug. La
-// forma correcta de probarlo es scrollWidth vs clientWidth del párrafo que
-// contiene el texto: si scrollWidth > clientWidth, el texto no entra en su
-// propia caja y se está derramando visualmente sobre lo que esté al lado.
+// getBoundingClientRect() of an element does NOT grow from overflowing
+// content (overflow: visible doesn't expand the element's own box) — that's
+// why comparing bounding boxes between columns doesn't catch the bug. The
+// correct way to test it is scrollWidth vs. clientWidth of the paragraph
+// holding the text: if scrollWidth > clientWidth, the text doesn't fit in
+// its own box and is visually spilling onto whatever's next to it.
 const path = require('path');
 const { test, expect } = require('@playwright/test');
 const { BASE_URL } = require('./helpers');
@@ -41,16 +41,17 @@ const STORAGE_STATE_PATH = path.join(__dirname, '.auth', 'customer.json');
 test.use({ storageState: STORAGE_STATE_PATH });
 
 test.describe('Checkout — Óptica Global', () => {
-  test('CO-09: dirección/localidad muy largas no rompen el resumen de la orden confirmada', async ({ page }) => {
+  test('CO-09: long address/city do not break the order-confirmed summary', async ({ page }) => {
     await page.goto(`${BASE_URL}/products/optica-zr6046`);
     await page.getByTestId('product-options').getByRole('button', { name: 'Rosa' }).click();
     await page.getByRole('main').getByRole('button', { name: 'Agregar', exact: true }).first().click();
-    // Esperar a que el Server Action de "agregar al carrito" termine antes de
-    // navegar: un goto() inmediato puede cortar el request a mitad de camino.
+    // Wait for the "add to cart" Server Action to finish before navigating:
+    // an immediate goto() can cut the request off mid-flight.
     await page.getByRole('button', { name: /Carrito \(\d+\)/ }).filter({ hasText: /Carrito \([1-9]/ }).waitFor({ timeout: 10000 });
 
-    // Subir la cantidad de a un click con espera entre clicks: clickear muy rápido
-    // seguido puede pisar el paso anterior (la UI todavía no terminó de re-renderizar).
+    // Bump the quantity one click at a time with a pause between clicks:
+    // clicking too fast can step on the previous action while the UI is
+    // still re-rendering.
     await page.goto(`${BASE_URL}/cart`);
     await page.waitForLoadState('networkidle');
     const row = page.getByRole('row', { name: /ZR6046.*Rosa/ });
@@ -74,15 +75,16 @@ test.describe('Checkout — Óptica Global', () => {
     await page.locator('input[name="shipping_address.address_1"]').fill(LONG_TEXT);
     await page.locator('input[name="shipping_address.city"]').fill(LONG_TEXT);
     await page.locator('input[name="shipping_address.postal_code"]').fill('1414');
-    // El teléfono ya viene precargado (cuenta con dirección guardada) en un input
-    // oculto detrás del selector +54 — no hace falta completarlo de nuevo.
+    // The phone number is already pre-filled (the account has a saved
+    // address) in an input hidden behind the +54 selector — no need to fill
+    // it again.
     await page.locator('input[name="dni_cuit"]').fill('20345678');
     await page.getByRole('button', { name: /continuar al envío/i }).click();
 
-    // El paso de envío a veces ya viene expandido a "pago" (método único
-    // disponible); si el botón de "continuar al pago" no aparece, seguimos.
-    // El paso de pago tarda un momento en inicializar el proveedor (Manual
-    // Payment) antes de mostrar "Continuar a revisión".
+    // The shipping step is sometimes already expanded into "payment" (single
+    // available method); if the "continue to payment" button doesn't show
+    // up, move on. The payment step takes a moment to initialize the
+    // provider (Manual Payment) before showing "Continue to review".
     const payButton = page.getByRole('button', { name: /continuar al pago/i });
     await page.waitForTimeout(3000);
     if (await payButton.count()) {
@@ -99,11 +101,11 @@ test.describe('Checkout — Óptica Global', () => {
       clientWidth: el.clientWidth,
     }));
 
-    // Hoy da scrollWidth ~549 vs clientWidth ~283 (texto no entra ni a la mitad
-    // de su columna): confirma visualmente que se derrama sobre "Contacto" y
-    // "Método", tal como se ve en el screenshot real. Cuando el fix limite la
-    // longitud del campo (o agregue wrap), esto debería pasar a scrollWidth <=
-    // clientWidth y el test pasa solo, sin tocarlo.
+    // Currently scrollWidth is ~549 vs. clientWidth ~283 (the text doesn't
+    // even fit half its column): visually confirms it spills onto "Contact"
+    // and "Method", as seen in the real screenshot. Once the fix caps the
+    // field length (or adds wrapping), this should flip to
+    // scrollWidth <= clientWidth and the test passes on its own, untouched.
     expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth + 1);
   });
 });
