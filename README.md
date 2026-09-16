@@ -36,6 +36,15 @@ node --env-file=.env tests/optica-global/setup-auth.js
 
 `control-acceso.spec.js` uses placeholder order/fulfillment IDs (`_EXAMPLE_ID`) — to run it against a real environment, swap them for real IDs pulled from Admin.
 
+## CI/CD
+
+`.github/workflows/playwright.yml` splits the suite by risk instead of running everything on every push:
+
+- **SEO + Catálogo** run automatically on every push/PR — they're read-only against the production storefront.
+- **Control de acceso** and **Checkout** are manual (`workflow_dispatch` only). Control de acceso needs real order/fulfillment IDs (the placeholders 404). Checkout completes a real order and consumes real stock on every run, so it doesn't belong in an unattended, automatic trigger.
+
+Secrets used in CI (`MEDUSA_PUBLISHABLE_KEY`, `CUSTOMER_EMAIL`) map to the same variables documented in `.env.example`, set as repo secrets instead of a committed `.env`.
+
 ## Stack
 
 Playwright + Node.js, against a Next.js storefront on top of Medusa JS v2.

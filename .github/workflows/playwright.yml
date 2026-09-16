@@ -1,0 +1,106 @@
+name: Playwright Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # SEO + catálogo son de solo lectura contra el storefront en producción:
+  # no mutan nada, así que corren automáticamente en cada push/PR.
+  safe-tests:
+    name: SEO + Catálogo (automático)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - run: npx playwright test tests/optica-global/seo.spec.js tests/optica-global/catalogo.spec.js
+        env:
+          CI: true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-safe
+          path: playwright-report/
+          retention-days: 7
+
+  # Control de acceso pega directo al Admin API real. No muta nada (solo
+  # confirma que se rechacen requests sin token / con la publishable key),
+  # pero usa IDs de orden/fulfillment reales — los placeholders del repo
+  # (_EXAMPLE_ID) devuelven 404. Por eso queda manual: solo corre con
+  # workflow_dispatch, una vez que los IDs reales estén cargados como secret.
+  control-acceso:
+    name: Control de acceso (manual)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - run: npx playwright test tests/optica-global/control-acceso.spec.js
+        env:
+          CI: true
+          MEDUSA_PUBLISHABLE_KEY: ${{ secrets.MEDUSA_PUBLISHABLE_KEY }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-control-acceso
+          path: playwright-report/
+          retention-days: 7
+
+  # Checkout completa una orden real (Manual Payment, sin cobro real) y
+  # consume stock real en cada corrida. No tiene sentido dispararlo en cada
+  # push — queda manual, y el concurrency group evita que dos corridas
+  # simultáneas consuman stock a la vez.
+  checkout:
+    name: Checkout E2E (manual — genera una orden real)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    concurrency:
+      group: optica-checkout
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      # Genera el storageState leyendo el código OTP directo de la inbox
+      # pública de yopmail (ver tests/optica-global/setup-auth.js). No se
+      # commitea: .auth/ está en .gitignore, así que se regenera en cada run.
+      - name: Generar storageState (login real por OTP)
+        run: node tests/optica-global/setup-auth.js
+        env:
+          CUSTOMER_EMAIL: ${{ secrets.CUSTOMER_EMAIL }}
+
+      - run: npx playwright test tests/optica-global/checkout.spec.js
+        env:
+          CI: true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-checkout
+          path: playwright-report/
+          retention-days: 7
