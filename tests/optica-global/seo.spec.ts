@@ -2,8 +2,8 @@
 // BUG-08 and BUG-10 in the report). These tests document already-confirmed
 // bugs: today they're expected to fail red; they'll go green once the dev
 // team fixes each one.
-const { test, expect } = require('@playwright/test');
-const { ROOT_URL, BASE_URL, PRODUCT_URL } = require('./helpers');
+import { test, expect } from '@playwright/test';
+import { ROOT_URL, BASE_URL, PRODUCT_URL } from './helpers';
 
 test.describe('SEO — Óptica Global', () => {
   test('SEO-01: document language is Spanish, not English', async ({ page }) => {

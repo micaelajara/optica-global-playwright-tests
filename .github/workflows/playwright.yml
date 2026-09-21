@@ -8,6 +8,22 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Chequeo de tipos de TypeScript: rápido, no necesita navegadores, corre en
+  # cada push/PR para cortar errores de tipos antes de gastar tiempo en los
+  # jobs con browser.
+  typecheck:
+    name: Type check (TypeScript)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - run: npm ci
+      - run: npm run typecheck
+
   # SEO + catálogo son de solo lectura contra el storefront en producción:
   # no mutan nada, así que corren automáticamente en cada push/PR.
   safe-tests:
@@ -23,7 +39,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
 
-      - run: npx playwright test tests/optica-global/seo.spec.js tests/optica-global/catalogo.spec.js
+      - run: npx playwright test tests/optica-global/seo.spec.ts tests/optica-global/catalogo.spec.ts
         env:
           CI: true
 
@@ -53,7 +69,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
 
-      - run: npx playwright test tests/optica-global/control-acceso.spec.js
+      - run: npx playwright test tests/optica-global/control-acceso.spec.ts
         env:
           CI: true
           MEDUSA_PUBLISHABLE_KEY: ${{ secrets.MEDUSA_PUBLISHABLE_KEY }}
@@ -87,14 +103,14 @@ jobs:
       - run: npx playwright install --with-deps chromium
 
       # Genera el storageState leyendo el código OTP directo de la inbox
-      # pública de yopmail (ver tests/optica-global/setup-auth.js). No se
+      # pública de yopmail (ver tests/optica-global/setup-auth.ts). No se
       # commitea: .auth/ está en .gitignore, así que se regenera en cada run.
       - name: Generar storageState (login real por OTP)
-        run: node tests/optica-global/setup-auth.js
+        run: npx tsx tests/optica-global/setup-auth.ts
         env:
           CUSTOMER_EMAIL: ${{ secrets.CUSTOMER_EMAIL }}
 
-      - run: npx playwright test tests/optica-global/checkout.spec.js
+      - run: npx playwright test tests/optica-global/checkout.spec.ts
         env:
           CI: true
 

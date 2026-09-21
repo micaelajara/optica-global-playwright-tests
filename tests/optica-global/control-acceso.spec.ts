@@ -15,8 +15,8 @@
 // not the real ones); the real mutation was never run because the session's
 // risk classification blocked it by default (writing to a real production
 // order) and there was no explicit confirmation to force it.
-const { test, expect } = require('@playwright/test');
-const { ADMIN_API_URL, MEDUSA_PUBLISHABLE_KEY } = require('./helpers');
+import { test, expect } from '@playwright/test';
+import { ADMIN_API_URL, MEDUSA_PUBLISHABLE_KEY } from './helpers';
 
 const ORDER_ID = 'order_EXAMPLE_ID'; // replace with a real order ID to run this
 const FULFILLMENT_ID = 'ful_EXAMPLE_ID'; // replace with a real fulfillment ID to run this
@@ -31,7 +31,7 @@ test.describe('Control de acceso — Óptica Global', () => {
   test('CA-02: the storefront publishable key (no customer token) is not enough for an Admin action', async ({ request }) => {
     const response = await request.post(MARK_AS_DELIVERED_URL, {
       data: {},
-      headers: { 'x-publishable-api-key': MEDUSA_PUBLISHABLE_KEY },
+      headers: { 'x-publishable-api-key': MEDUSA_PUBLISHABLE_KEY ?? '' },
     });
     expect([401, 403]).toContain(response.status());
   });

@@ -11,29 +11,32 @@
 // manual step needed.
 //
 // Run it again if the storageState expires or if CUSTOMER_EMAIL changes:
-//   node --env-file=.env tests/optica-global/setup-auth.js
-const { chromium } = require('playwright');
-const { BASE_URL } = require('./helpers');
+//   npx tsx tests/optica-global/setup-auth.ts
+import path from 'path';
+import { chromium, type Browser } from 'playwright';
+import { BASE_URL } from './helpers';
 
 const CUSTOMER_EMAIL = process.env.CUSTOMER_EMAIL;
-const STORAGE_STATE_PATH = require('path').join(__dirname, '.auth', 'customer.json');
+const STORAGE_STATE_PATH = path.join(__dirname, '.auth', 'customer.json');
 
-async function readCodeFromYopmail(browser, email) {
+async function readCodeFromYopmail(browser: Browser, email: string): Promise<string> {
   const localPart = email.split('@')[0];
   const mailPage = await browser.newPage({
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
   });
   await mailPage.goto(`https://yopmail.com/?login=${localPart}`);
-  let lastError;
+  let lastError: Error | undefined;
   for (let attempt = 0; attempt < 6; attempt++) {
     await mailPage.waitForTimeout(2000);
     await mailPage.reload();
     await mailPage.waitForTimeout(1000);
     try {
       const inboxFrame = mailPage.frame({ name: 'ifinbox' });
+      if (!inboxFrame) throw new Error('ifinbox frame not found');
       await inboxFrame.locator('div.m').first().click({ timeout: 3000 });
       await mailPage.waitForTimeout(1000);
       const mailFrame = mailPage.frame({ name: 'ifmail' });
+      if (!mailFrame) throw new Error('ifmail frame not found');
       const text = await mailFrame.locator('body').innerText();
       const match = text.match(/(\d{6})/);
       if (match) {
@@ -42,7 +45,7 @@ async function readCodeFromYopmail(browser, email) {
       }
       lastError = new Error('The latest email does not contain a 6-digit code');
     } catch (e) {
-      lastError = e;
+      lastError = e instanceof Error ? e : new Error(String(e));
     }
   }
   await mailPage.close();

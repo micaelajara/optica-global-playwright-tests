@@ -6,7 +6,9 @@
   "scripts": {
     "test": "playwright test",
     "test:optica": "playwright test tests/optica-global",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "typecheck": "tsc --noEmit",
+    "setup-auth": "tsx tests/optica-global/setup-auth.ts"
   },
   "keywords": [],
   "author": "",
@@ -14,6 +16,8 @@
   "type": "commonjs",
   "devDependencies": {
     "@playwright/test": "^1.61.1",
-    "@types/node": "^26.0.1"
+    "@types/node": "^26.0.1",
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0"
   }
 }

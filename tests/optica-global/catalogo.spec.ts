@@ -1,6 +1,6 @@
 // CB cases from the test plan (Catalog / Search area).
-const { test, expect } = require('@playwright/test');
-const { BASE_URL } = require('./helpers');
+import { test, expect } from '@playwright/test';
+import { BASE_URL } from './helpers';
 
 test.describe('Catálogo — Óptica Global', () => {
   test('CAT-01: filtering by category shows only those products', async ({ page }) => {

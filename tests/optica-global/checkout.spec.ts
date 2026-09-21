@@ -31,9 +31,9 @@
 // correct way to test it is scrollWidth vs. clientWidth of the paragraph
 // holding the text: if scrollWidth > clientWidth, the text doesn't fit in
 // its own box and is visually spilling onto whatever's next to it.
-const path = require('path');
-const { test, expect } = require('@playwright/test');
-const { BASE_URL } = require('./helpers');
+import path from 'path';
+import { test, expect } from '@playwright/test';
+import { BASE_URL } from './helpers';
 
 const LONG_TEXT = '3'.repeat(300);
 const STORAGE_STATE_PATH = path.join(__dirname, '.auth', 'customer.json');
