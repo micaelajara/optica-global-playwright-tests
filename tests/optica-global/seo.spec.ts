@@ -45,7 +45,10 @@ test.describe('SEO — Óptica Global', () => {
   });
 
   test('SEO-10: the product page has a single <h1>', async ({ page }) => {
-    await page.goto(PRODUCT_URL);
+    // Guard against a false green: if the product is removed from the
+    // catalog, the 404 page also has a single <h1>.
+    const response = await page.goto(PRODUCT_URL);
+    expect(response?.status()).toBe(200);
     await expect(page.locator('h1')).toHaveCount(1);
   });
 });
