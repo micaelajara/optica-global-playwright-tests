@@ -29,6 +29,7 @@ jobs:
   safe-tests:
     name: SEO + Catálogo (automático)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -58,6 +59,7 @@ jobs:
   control-acceso:
     name: Control de acceso (manual)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
@@ -88,6 +90,7 @@ jobs:
   checkout:
     name: Checkout E2E (manual — genera una orden real)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: github.event_name == 'workflow_dispatch'
     concurrency:
       group: optica-checkout
