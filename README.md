@@ -41,7 +41,7 @@ npm run setup-auth
 `.github/workflows/playwright.yml` splits the suite by risk instead of running everything on every push:
 
 - **Type check** runs on every push/PR, no browsers needed — fails fast on type errors before the heavier jobs spin up.
-- **SEO + Catálogo** run automatically on every push/PR — they're read-only against the production storefront.
+- **SEO + Catálogo** run automatically on every push/PR — they're read-only against the production storefront. Bugs the dev team already fixed stay as regression checks; the one still open (missing canonical tag, BUG-07) is marked `test.fail()`, so the run is green while the bug is known and turns red the day it's fixed and the annotation needs to come out.
 - **Control de acceso** and **Checkout** are manual (`workflow_dispatch` only). Control de acceso needs real order/fulfillment IDs (the placeholders 404). Checkout completes a real order and consumes real stock on every run, so it doesn't belong in an unattended, automatic trigger.
 
 Secrets used in CI (`MEDUSA_PUBLISHABLE_KEY`, `CUSTOMER_EMAIL`) map to the same variables documented in `.env.example`, set as repo secrets instead of a committed `.env`.

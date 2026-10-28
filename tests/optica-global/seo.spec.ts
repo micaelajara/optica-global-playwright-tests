@@ -1,7 +1,8 @@
 // SEO-01 through SEO-07 and SEO-10 cases from the test plan (BUG-02 through
 // BUG-08 and BUG-10 in the report). These tests document already-confirmed
-// bugs: today they're expected to fail red; they'll go green once the dev
-// team fixes each one.
+// bugs. Fixed ones now pass as regression checks; a bug still open is marked
+// with test.fail(), so the pipeline stays green while it's known, and the
+// test flags it as soon as the fix lands (then the annotation comes out).
 import { test, expect } from '@playwright/test';
 import { ROOT_URL, BASE_URL, PRODUCT_URL } from './helpers';
 
@@ -34,6 +35,7 @@ test.describe('SEO — Óptica Global', () => {
   });
 
   test('SEO-06: the page declares a rel="canonical" link', async ({ page }) => {
+    test.fail(true, 'BUG-07 still open in production: no rel="canonical" on the home');
     await page.goto(BASE_URL);
     await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
   });
